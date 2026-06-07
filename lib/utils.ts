@@ -67,6 +67,22 @@ export function compareCustomValues(
   return dir === "desc" ? -r : r;
 }
 
+/**
+ * Build a wa.me link from a phone number. Strips +, spaces, dashes, etc., so
+ * "+60 12-345 6789" → "https://wa.me/60123456789".
+ *
+ * A leading 0 (local format, e.g. "012-345 6789") is treated as a Malaysian
+ * number and gets +60 — change "60" below if your clients are mostly elsewhere.
+ * Returns null if there aren't enough digits.
+ */
+export function whatsappLink(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = "60" + digits.slice(1);
+  if (digits.length < 8) return null;
+  return `https://wa.me/${digits}`;
+}
+
 export function formatBytes(n: number | null | undefined): string {
   if (!n) return "";
   const units = ["B", "KB", "MB", "GB"];

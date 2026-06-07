@@ -16,7 +16,8 @@ import { listActivities } from "@/lib/data/activities";
 import { listTasks } from "@/lib/data/tasks";
 import { listDocuments } from "@/lib/data/documents";
 import { listStages } from "@/lib/data/stages";
-import { formatDate } from "@/lib/utils";
+import { formatDate, whatsappLink } from "@/lib/utils";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import type { CustomData, FieldDefinition } from "@/lib/types";
 
 function displayValue(field: FieldDefinition, value: CustomData[string]) {
@@ -82,6 +83,18 @@ export default async function ClientDetailPage({
                   </a>
                 ) : (
                   <span className="text-muted-foreground">—</span>
+                )}
+                {whatsappLink(client.phone) && (
+                  <a
+                    href={whatsappLink(client.phone)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Message on WhatsApp"
+                    title="Message on WhatsApp"
+                    className="ml-auto inline-flex items-center gap-1 rounded-md bg-[#25D366] px-2 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  >
+                    <WhatsAppIcon className="size-3.5" /> WhatsApp
+                  </a>
                 )}
               </div>
               <div className="flex items-center gap-2">
