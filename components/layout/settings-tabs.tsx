@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { href: "/settings/fields", label: "Custom fields" },
   { href: "/settings/tags", label: "Tags" },
+  { href: "/settings/stages", label: "Pipeline stages" },
 ];
 
 /** Small switcher between settings pages (handy on mobile without a sidebar). */

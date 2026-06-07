@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { ClientsToolbar } from "@/components/clients/clients-toolbar";
@@ -12,6 +12,7 @@ import { requireUserId } from "@/lib/auth";
 import { listClients } from "@/lib/data/clients";
 import { listFields } from "@/lib/data/fields";
 import { listTags } from "@/lib/data/tags";
+import { listStages } from "@/lib/data/stages";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -28,9 +29,10 @@ export default async function ClientsPage({
   const sp = await searchParams;
   const dir = str(sp.dir) === "asc" ? "asc" : "desc";
 
-  const [fields, tags, clients] = await Promise.all([
+  const [fields, tags, stages, clients] = await Promise.all([
     listFields(userId),
     listTags(userId),
+    listStages(userId),
     listClients(userId, {
       search: str(sp.q),
       tagId: str(sp.tag),
@@ -50,6 +52,12 @@ export default async function ClientsPage({
       >
         {/* Desktop actions; on mobile the FAB handles "new". */}
         <div className="hidden items-center gap-2 md:flex">
+          <Link
+            href="/clients/trash"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
+            <Trash2 /> Trash
+          </Link>
           <CsvControls hasClients={clients.length > 0} />
           <Link href="/clients/new" className={buttonVariants()}>
             <Plus /> New client
@@ -91,14 +99,19 @@ export default async function ClientsPage({
           <>
             {/* Mobile: always a card list. */}
             <div className="md:hidden">
-              <ClientGallery clients={clients} />
+              <ClientGallery clients={clients} stages={stages} />
             </div>
             {/* Desktop: table or gallery per the toggle. */}
             <div className="hidden md:block">
               {view === "gallery" ? (
-                <ClientGallery clients={clients} />
+                <ClientGallery clients={clients} stages={stages} />
               ) : (
-                <ClientTable clients={clients} fields={fields} />
+                <ClientTable
+                  clients={clients}
+                  fields={fields}
+                  stages={stages}
+                  tags={tags}
+                />
               )}
             </div>
           </>

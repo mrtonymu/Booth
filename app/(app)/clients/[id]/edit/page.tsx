@@ -8,6 +8,7 @@ import { requireUserId } from "@/lib/auth";
 import { getClient } from "@/lib/data/clients";
 import { listFields } from "@/lib/data/fields";
 import { listTags } from "@/lib/data/tags";
+import { listStages } from "@/lib/data/stages";
 
 export default async function EditClientPage({
   params,
@@ -16,10 +17,11 @@ export default async function EditClientPage({
 }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const [client, fields, tags] = await Promise.all([
+  const [client, fields, tags, stages] = await Promise.all([
     getClient(userId, id),
     listFields(userId),
     listTags(userId),
+    listStages(userId),
   ]);
 
   if (!client) notFound();
@@ -34,7 +36,7 @@ export default async function EditClientPage({
           <ArrowLeft /> Back
         </Link>
       </PageHeader>
-      <ClientForm fields={fields} tags={tags} client={client} />
+      <ClientForm fields={fields} tags={tags} stages={stages} client={client} />
     </>
   );
 }

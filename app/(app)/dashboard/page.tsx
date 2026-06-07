@@ -8,12 +8,9 @@ import { requireUserId } from "@/lib/auth";
 import { listClients } from "@/lib/data/clients";
 import { listTasks } from "@/lib/data/tasks";
 import { listRecentActivities } from "@/lib/data/activities";
+import { listStages } from "@/lib/data/stages";
 import { formatDateTime, todayISO } from "@/lib/utils";
-import {
-  ACTIVITY_TYPE_LABELS,
-  PIPELINE_STAGES,
-  STAGE_COLORS,
-} from "@/lib/types";
+import { ACTIVITY_TYPE_LABELS } from "@/lib/types";
 
 const STAGE_BAR: Record<string, string> = {
   blue: "bg-blue-500",
@@ -26,10 +23,11 @@ const STAGE_BAR: Record<string, string> = {
 
 export default async function DashboardPage() {
   const userId = await requireUserId();
-  const [clients, tasks, recent] = await Promise.all([
+  const [clients, tasks, recent, stages] = await Promise.all([
     listClients(userId),
     listTasks(userId),
     listRecentActivities(userId, 6),
+    listStages(userId),
   ]);
 
   const today = todayISO();
@@ -46,7 +44,7 @@ export default async function DashboardPage() {
   ).length;
   const upcoming = openTasks.slice(0, 6);
 
-  const stageCounts = PIPELINE_STAGES.map((s) => ({
+  const stageCounts = stages.map((s) => ({
     ...s,
     count: clients.filter((c) => c.stage === s.key).length,
   }));
@@ -98,7 +96,7 @@ export default async function DashboardPage() {
                   </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full ${STAGE_BAR[STAGE_COLORS[s.key]] ?? "bg-slate-400"}`}
+                      className={`h-full rounded-full ${STAGE_BAR[s.color] ?? "bg-slate-400"}`}
                       style={{ width: `${(s.count / maxStage) * 100}%` }}
                     />
                   </div>

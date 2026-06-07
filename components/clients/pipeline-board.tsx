@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { updateClientStageAction } from "@/app/(app)/clients/actions";
 import {
-  PIPELINE_STAGES,
   type ClientWithTags,
+  type PipelineStage,
   type TagColor,
 } from "@/lib/types";
 
@@ -21,7 +22,13 @@ const STAGE_DOT: Record<string, string> = {
   gray: "bg-slate-400",
 };
 
-export function PipelineBoard({ clients }: { clients: ClientWithTags[] }) {
+export function PipelineBoard({
+  clients,
+  stages,
+}: {
+  clients: ClientWithTags[];
+  stages: PipelineStage[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [dragOver, setDragOver] = React.useState<string | null>(null);
@@ -44,7 +51,7 @@ export function PipelineBoard({ clients }: { clients: ClientWithTags[] }) {
       if (!res.ok) {
         // Optimistic value reverts to the (unchanged) base when the transition
         // ends; just surface the error.
-        alert(res.error ?? "Could not move client");
+        toast.error(res.error ?? "Could not move client");
       }
     });
   }
@@ -56,7 +63,7 @@ export function PipelineBoard({ clients }: { clients: ClientWithTags[] }) {
         isPending && "opacity-90",
       )}
     >
-      {PIPELINE_STAGES.map((stage) => {
+      {stages.map((stage) => {
         const cards = optimistic.filter((c) => c.stage === stage.key);
         return (
           <div
@@ -128,7 +135,7 @@ export function PipelineBoard({ clients }: { clients: ClientWithTags[] }) {
                     onChange={(e) => move(c.id, e.target.value)}
                     className="mt-2 w-full cursor-pointer rounded border border-border bg-background px-1.5 py-1 text-xs text-muted-foreground"
                   >
-                    {PIPELINE_STAGES.map((s) => (
+                    {stages.map((s) => (
                       <option key={s.key} value={s.key}>
                         {s.label}
                       </option>

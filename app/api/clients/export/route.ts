@@ -1,14 +1,16 @@
 import { requireUserId } from "@/lib/auth";
 import { listClients } from "@/lib/data/clients";
 import { listFields } from "@/lib/data/fields";
+import { listStages } from "@/lib/data/stages";
 import { toCSV } from "@/lib/csv";
-import { STAGE_LABELS } from "@/lib/types";
+import { stageLabel } from "@/lib/types";
 
 export async function GET() {
   const userId = await requireUserId();
-  const [fields, clients] = await Promise.all([
+  const [fields, clients, stages] = await Promise.all([
     listFields(userId),
     listClients(userId),
+    listStages(userId),
   ]);
 
   const header = [
@@ -24,7 +26,7 @@ export async function GET() {
     c.name,
     c.phone ?? "",
     c.email ?? "",
-    STAGE_LABELS[c.stage] ?? c.stage,
+    stageLabel(stages, c.stage),
     ...fields.map((f) => {
       const v = c.custom_data?.[f.key];
       if (f.type === "checkbox") return v ? "Yes" : "";

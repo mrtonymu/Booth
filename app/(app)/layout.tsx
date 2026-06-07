@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Contact, Settings } from "lucide-react";
+import { Contact, Search, Settings } from "lucide-react";
+import { Toaster } from "sonner";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomTabs } from "@/components/layout/bottom-tabs";
+import { SearchBox } from "@/components/search/search-box";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { requireUserId } from "@/lib/auth";
 import { DEMO_MODE } from "@/lib/demo";
@@ -46,6 +48,9 @@ export default async function AppLayout({
             Client CRM
           </Link>
         </div>
+        <div className="px-2 pb-2 pt-1">
+          <SearchBox placeholder="Search…" />
+        </div>
         <div className="flex-1 py-2">
           <SidebarNav />
         </div>
@@ -67,6 +72,13 @@ export default async function AppLayout({
           </div>
           <div className="flex items-center gap-1">
             <Link
+              href="/search"
+              aria-label="Search"
+              className="flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Search className="size-5" />
+            </Link>
+            <Link
               href="/settings/fields"
               aria-label="Settings"
               className="flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -84,6 +96,8 @@ export default async function AppLayout({
 
       {/* Mobile bottom tab bar */}
       <BottomTabs />
+
+      <Toaster richColors position="top-center" />
     </div>
   );
 }

@@ -6,6 +6,7 @@
  * This lets you preview the full UI at localhost before wiring up real keys.
  * The real auth/data paths are untouched — flip DEMO_MODE=false to use them.
  */
+import { DEFAULT_STAGES } from "@/lib/types";
 import type {
   Activity,
   ActivityType,
@@ -14,11 +15,12 @@ import type {
   ClientWithTags,
   CustomData,
   FieldDefinition,
+  PipelineStage,
   Tag,
   Task,
   TaskWithClient,
 } from "@/lib/types";
-import { compareCustomValues } from "@/lib/utils";
+import { compareCustomValues, slugifyKey } from "@/lib/utils";
 import type { ClientInput, ListClientsParams } from "@/lib/data/clients";
 import type { FieldInput } from "@/lib/data/fields";
 
@@ -26,7 +28,7 @@ export const DEMO_MODE = process.env.DEMO_MODE === "true";
 export const DEMO_USER_ID = "demo-user";
 
 // Bump when the store shape changes so a stale dev (hot-reload) store reseeds.
-const STORE_VERSION = 3;
+const STORE_VERSION = 5;
 
 interface Store {
   _v: number;
@@ -37,6 +39,7 @@ interface Store {
   activities: Activity[];
   tasks: Task[];
   documents: ClientDocument[];
+  stages: PipelineStage[];
 }
 
 // Persist the store on globalThis so it survives across requests in dev.
@@ -139,6 +142,15 @@ function seed(): Store {
     },
   ];
 
+  const stages: PipelineStage[] = DEFAULT_STAGES.map((s, i) => ({
+    id: `stg_${s.key}`,
+    owner_id: O,
+    key: s.key,
+    label: s.label,
+    color: s.color,
+    position: i,
+  }));
+
   return {
     _v: STORE_VERSION,
     fields,
@@ -148,6 +160,7 @@ function seed(): Store {
     activities,
     tasks,
     documents,
+    stages,
   };
 }
 
@@ -159,7 +172,7 @@ function t(id: string, name: string, color: string): Tag {
   return { id, owner_id: O, name, color, created_at: "2026-05-20T00:00:00Z" };
 }
 function c(id: string, name: string, phone: string, email: string, stage: string, custom: CustomData, created: string, updated: string): Client {
-  return { id, owner_id: O, name, phone, email, stage, custom_data: custom, created_at: created, updated_at: updated };
+  return { id, owner_id: O, name, phone, email, stage, custom_data: custom, created_at: created, updated_at: updated, deleted_at: null };
 }
 function a(id: string, client_id: string, type: ActivityType, content: string, created: string): Activity {
   return { id, client_id, owner_id: O, type, content, created_at: created };
@@ -237,7 +250,7 @@ export function demoSetClientTags(clientId: string, tagIds: string[]) {
 // ---- clients ----
 export function demoListClients(params: ListClientsParams = {}): ClientWithTags[] {
   const s = getStore();
-  let rows = s.clients.filter((cl) => cl.owner_id === O);
+  let rows = s.clients.filter((cl) => cl.owner_id === O && !cl.deleted_at);
 
   if (params.search?.trim()) {
     const q = params.search.trim().toLowerCase();
@@ -276,7 +289,9 @@ export function demoListClients(params: ListClientsParams = {}): ClientWithTags[
 }
 export function demoGetClient(id: string): ClientWithTags | null {
   const s = getStore();
-  const cl = s.clients.find((x) => x.id === id && x.owner_id === O);
+  const cl = s.clients.find(
+    (x) => x.id === id && x.owner_id === O && !x.deleted_at,
+  );
   return cl ? attachTags(s, cl) : null;
 }
 export function demoCreateClient(input: ClientInput): string {
@@ -284,7 +299,7 @@ export function demoCreateClient(input: ClientInput): string {
   getStore().clients.push({
     id, owner_id: O, name: input.name, phone: input.phone, email: input.email,
     stage: input.stage ?? "new", custom_data: { ...input.custom_data },
-    created_at: now(), updated_at: now(),
+    created_at: now(), updated_at: now(), deleted_at: null,
   });
   return id;
 }
@@ -303,13 +318,55 @@ export function demoUpdateClientStage(id: string, stage: string) {
     cl.updated_at = now();
   }
 }
+/** Soft delete — flag deleted_at so it's recoverable from the trash. */
 export function demoDeleteClient(id: string) {
+  const cl = getStore().clients.find((x) => x.id === id && x.owner_id === O);
+  if (cl) cl.deleted_at = now();
+}
+export function demoRestoreClient(id: string) {
+  const cl = getStore().clients.find((x) => x.id === id && x.owner_id === O);
+  if (cl) cl.deleted_at = null;
+}
+export function demoListDeletedClients(): ClientWithTags[] {
+  const s = getStore();
+  return s.clients
+    .filter((cl) => cl.owner_id === O && cl.deleted_at)
+    .sort((a, b) => (a.deleted_at! < b.deleted_at! ? 1 : -1))
+    .map((cl) => attachTags(s, cl));
+}
+/** Permanent delete — removes the client and cascades related records. */
+export function demoHardDeleteClient(id: string) {
   const s = getStore();
   s.clients = s.clients.filter((x) => x.id !== id);
   s.clientTags = s.clientTags.filter((ct) => ct.client_id !== id);
   s.activities = s.activities.filter((ac) => ac.client_id !== id);
   s.tasks = s.tasks.filter((tsk) => tsk.client_id !== id);
   s.documents = s.documents.filter((d) => d.client_id !== id);
+}
+export function demoBulkUpdateStage(ids: string[], stage: string) {
+  const idset = new Set(ids);
+  for (const c of getStore().clients) {
+    if (idset.has(c.id) && c.owner_id === O) {
+      c.stage = stage;
+      c.updated_at = now();
+    }
+  }
+}
+export function demoBulkSoftDelete(ids: string[]) {
+  const idset = new Set(ids);
+  for (const c of getStore().clients) {
+    if (idset.has(c.id) && c.owner_id === O) c.deleted_at = now();
+  }
+}
+export function demoAddTagToClients(clientIds: string[], tagId: string) {
+  const s = getStore();
+  for (const clientId of clientIds) {
+    const owned = s.clients.some((c) => c.id === clientId && c.owner_id === O);
+    const exists = s.clientTags.some(
+      (ct) => ct.client_id === clientId && ct.tag_id === tagId,
+    );
+    if (owned && !exists) s.clientTags.push({ client_id: clientId, tag_id: tagId });
+  }
 }
 
 // ---- activities ----
@@ -407,4 +464,43 @@ export function demoCreateDocument(
 export function demoDeleteDocument(id: string) {
   const s = getStore();
   s.documents = s.documents.filter((d) => d.id !== id);
+}
+
+// ---- pipeline stages ----
+export function demoListStages(): PipelineStage[] {
+  return [...getStore().stages].sort((a, b) => a.position - b.position);
+}
+export function demoCreateStage(label: string, color: string) {
+  const s = getStore();
+  let key = slugifyKey(label);
+  if (!key) throw new Error("Label must contain letters or numbers");
+  if (s.stages.some((x) => x.key === key)) {
+    let i = 2;
+    while (s.stages.some((x) => x.key === `${key}_${i}`)) i++;
+    key = `${key}_${i}`;
+  }
+  s.stages.push({
+    id: uid("stg"),
+    owner_id: O,
+    key,
+    label,
+    color,
+    position: s.stages.length,
+  });
+}
+export function demoUpdateStage(
+  id: string,
+  patch: { label?: string; color?: string },
+) {
+  const stg = getStore().stages.find((x) => x.id === id);
+  if (stg) Object.assign(stg, patch);
+}
+export function demoDeleteStage(id: string) {
+  const s = getStore();
+  if (s.stages.length <= 1) throw new Error("Keep at least one stage");
+  const target = s.stages.find((x) => x.id === id);
+  if (!target) return;
+  const fallback = s.stages.find((x) => x.id !== id)!;
+  for (const c of s.clients) if (c.stage === target.key) c.stage = fallback.key;
+  s.stages = s.stages.filter((x) => x.id !== id);
 }

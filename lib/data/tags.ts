@@ -2,6 +2,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   DEMO_MODE,
+  demoAddTagToClients,
   demoCreateTag,
   demoDeleteTag,
   demoListTags,
@@ -55,6 +56,44 @@ export async function deleteTag(userId: string, id: string) {
     .eq("id", id)
     .eq("owner_id", userId);
   if (error) throw new Error(error.message);
+}
+
+/** Add one tag to many clients (skips clients that already have it). */
+export async function addTagToClients(
+  userId: string,
+  clientIds: string[],
+  tagId: string,
+) {
+  if (!clientIds.length) return;
+  if (DEMO_MODE) return demoAddTagToClients(clientIds, tagId);
+  const db = getSupabaseAdmin();
+
+  const { data: tag, error: tagErr } = await db
+    .from("tags")
+    .select("id")
+    .eq("id", tagId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+  if (tagErr) throw new Error(tagErr.message);
+  if (!tag) throw new Error("Tag not found");
+
+  const { data: owned, error: ownErr } = await db
+    .from("clients")
+    .select("id")
+    .in("id", clientIds)
+    .eq("owner_id", userId);
+  if (ownErr) throw new Error(ownErr.message);
+
+  const rows = (owned ?? []).map((c) => ({
+    client_id: c.id as string,
+    tag_id: tagId,
+  }));
+  if (rows.length) {
+    const { error } = await db
+      .from("client_tags")
+      .upsert(rows, { onConflict: "client_id,tag_id", ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+  }
 }
 
 /** Replace the full set of tags on a client (owner-checked). */

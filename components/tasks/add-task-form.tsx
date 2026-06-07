@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +47,7 @@ export function AddTaskForm({
     });
     setSaving(false);
     if (!res.ok) {
-      alert(res.error);
+      toast.error(res.error ?? "Could not add task");
       return;
     }
     setTitle("");

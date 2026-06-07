@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Upload, FileText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,7 @@ export function ClientDocuments({
   async function remove(id: string) {
     if (!confirm("Delete this file?")) return;
     const res = await deleteDocumentAction(id, clientId);
-    if (!res.ok) alert(res.error);
+    if (!res.ok) toast.error(res.error ?? "Could not delete file");
     else router.refresh();
   }
 
@@ -54,6 +55,7 @@ export function ClientDocuments({
         <input
           ref={inputRef}
           type="file"
+          aria-label="Upload file"
           className="hidden"
           onChange={onFile}
           disabled={busy}

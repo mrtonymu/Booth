@@ -46,8 +46,19 @@ export interface Tag {
 
 export type CustomData = Record<string, string | number | boolean | null>;
 
-// Sales pipeline stages. `color` reuses the tag palette (TagColor).
-export const PIPELINE_STAGES = [
+// A user-editable pipeline stage (stored in the pipeline_stages table).
+// `color` reuses the tag palette (TagColor).
+export interface PipelineStage {
+  id: string;
+  owner_id: string;
+  key: string;
+  label: string;
+  color: string;
+  position: number;
+}
+
+// Seeded for every new user on first use; fully editable afterwards.
+export const DEFAULT_STAGES = [
   { key: "new", label: "New lead", color: "blue" },
   { key: "contacted", label: "Contacted", color: "indigo" },
   { key: "viewing", label: "Viewing", color: "violet" },
@@ -56,14 +67,14 @@ export const PIPELINE_STAGES = [
   { key: "lost", label: "Lost", color: "gray" },
 ] as const;
 
-export type PipelineStage = (typeof PIPELINE_STAGES)[number]["key"];
+type StageLike = { key: string; label: string; color: string };
 
-export const STAGE_LABELS: Record<string, string> = Object.fromEntries(
-  PIPELINE_STAGES.map((s) => [s.key, s.label]),
-);
-export const STAGE_COLORS: Record<string, string> = Object.fromEntries(
-  PIPELINE_STAGES.map((s) => [s.key, s.color]),
-);
+export function stageLabel(stages: StageLike[], key: string): string {
+  return stages.find((s) => s.key === key)?.label ?? key;
+}
+export function stageColor(stages: StageLike[], key: string): string {
+  return stages.find((s) => s.key === key)?.color ?? "gray";
+}
 
 export interface Client {
   id: string;
@@ -75,6 +86,7 @@ export interface Client {
   custom_data: CustomData;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 /** Client joined with its tags (used in list + detail views). */

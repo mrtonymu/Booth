@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +24,11 @@ export function TagsManager({ tags }: { tags: Tag[] }) {
     if (!confirm(`Delete tag "${tag.name}"? It will be removed from all clients.`))
       return;
     const res = await deleteTagAction(tag.id);
-    if (!res.ok) alert(res.error);
-    else router.refresh();
+    if (!res.ok) toast.error(res.error ?? "Could not delete tag");
+    else {
+      toast.success("Tag deleted");
+      router.refresh();
+    }
   }
 
   return (

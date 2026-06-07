@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Trash2, MessageSquare, Phone, Users, Calendar, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -57,7 +58,7 @@ export function Timeline({
   async function remove(id: string) {
     if (!confirm("Delete this entry?")) return;
     const res = await deleteActivityAction(clientId, id);
-    if (!res.ok) alert(res.error);
+    if (!res.ok) toast.error(res.error ?? "Could not delete entry");
     else router.refresh();
   }
 

@@ -15,6 +15,7 @@ import { listFields } from "@/lib/data/fields";
 import { listActivities } from "@/lib/data/activities";
 import { listTasks } from "@/lib/data/tasks";
 import { listDocuments } from "@/lib/data/documents";
+import { listStages } from "@/lib/data/stages";
 import { formatDate } from "@/lib/utils";
 import type { CustomData, FieldDefinition } from "@/lib/types";
 
@@ -32,13 +33,15 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const [client, fields, activities, tasks, documents] = await Promise.all([
-    getClient(userId, id),
-    listFields(userId),
-    listActivities(userId, id),
-    listTasks(userId, id),
-    listDocuments(userId, id),
-  ]);
+  const [client, fields, activities, tasks, documents, stages] =
+    await Promise.all([
+      getClient(userId, id),
+      listFields(userId),
+      listActivities(userId, id),
+      listTasks(userId, id),
+      listDocuments(userId, id),
+      listStages(userId),
+    ]);
 
   if (!client) notFound();
 
@@ -65,7 +68,7 @@ export default async function ClientDetailPage({
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-card p-4">
             <div className="mb-3 border-b border-border pb-3">
-              <StageBadge stage={client.stage} />
+              <StageBadge stage={client.stage} stages={stages} />
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">

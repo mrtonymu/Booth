@@ -1,23 +1,33 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireUserId } from "@/lib/auth";
 import { listFields } from "@/lib/data/fields";
 import {
+  bulkSoftDelete,
+  bulkUpdateStage,
   createClient,
   deleteClient,
+  hardDeleteClient,
+  listClients,
+  restoreClient,
   updateClient,
   updateClientStage,
 } from "@/lib/data/clients";
-import { createTag, listTags, setClientTags } from "@/lib/data/tags";
+import {
+  addTagToClients,
+  createTag,
+  listTags,
+  setClientTags,
+} from "@/lib/data/tags";
 import { createActivity, deleteActivity } from "@/lib/data/activities";
+import { listStages } from "@/lib/data/stages";
 import {
   ACTIVITY_TYPES,
-  PIPELINE_STAGES,
   type ActivityType,
   type CustomData,
   type FieldDefinition,
+  type PipelineStage,
 } from "@/lib/types";
 
 export interface ClientFormPayload {
@@ -29,8 +39,13 @@ export interface ClientFormPayload {
   tagIds: string[];
 }
 
-function normalizeStage(stage: string | undefined): string {
-  return PIPELINE_STAGES.some((s) => s.key === stage) ? stage! : "new";
+function normalizeStage(
+  stages: PipelineStage[],
+  stage: string | undefined,
+): string {
+  return stages.some((s) => s.key === stage)
+    ? stage!
+    : (stages[0]?.key ?? "new");
 }
 
 export interface ClientActionResult {
@@ -75,7 +90,10 @@ export async function createClientAction(
   const name = payload.name?.trim();
   if (!name) return { ok: false, error: "Name is required" };
 
-  const fields = await listFields(userId);
+  const [fields, stages] = await Promise.all([
+    listFields(userId),
+    listStages(userId),
+  ]);
   const { data: custom_data, error } = buildCustomData(fields, payload.custom);
   if (error) return { ok: false, error };
 
@@ -85,7 +103,7 @@ export async function createClientAction(
       name,
       phone: payload.phone?.trim() || null,
       email: payload.email?.trim() || null,
-      stage: normalizeStage(payload.stage),
+      stage: normalizeStage(stages, payload.stage),
       custom_data,
     });
     await setClientTags(userId, id, payload.tagIds ?? []);
@@ -104,7 +122,10 @@ export async function updateClientAction(
   const name = payload.name?.trim();
   if (!name) return { ok: false, error: "Name is required" };
 
-  const fields = await listFields(userId);
+  const [fields, stages] = await Promise.all([
+    listFields(userId),
+    listStages(userId),
+  ]);
   const { data: custom_data, error } = buildCustomData(fields, payload.custom);
   if (error) return { ok: false, error };
 
@@ -113,7 +134,7 @@ export async function updateClientAction(
       name,
       phone: payload.phone?.trim() || null,
       email: payload.email?.trim() || null,
-      stage: normalizeStage(payload.stage),
+      stage: normalizeStage(stages, payload.stage),
       custom_data,
     });
     await setClientTags(userId, id, payload.tagIds ?? []);
@@ -125,11 +146,100 @@ export async function updateClientAction(
   return { ok: true, id };
 }
 
-export async function deleteClientAction(id: string): Promise<void> {
+/** Soft delete — moves the client to the trash (recoverable). */
+export async function deleteClientAction(
+  id: string,
+): Promise<ClientActionResult> {
   const userId = await requireUserId();
-  await deleteClient(userId, id);
+  try {
+    await deleteClient(userId, id);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
   revalidatePath("/clients");
-  redirect("/clients");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  revalidatePath("/clients/trash");
+  return { ok: true };
+}
+
+export async function restoreClientAction(
+  id: string,
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  try {
+    await restoreClient(userId, id);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/clients");
+  revalidatePath("/clients/trash");
+  return { ok: true };
+}
+
+export async function permanentlyDeleteClientAction(
+  id: string,
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  try {
+    await hardDeleteClient(userId, id);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/clients/trash");
+  return { ok: true };
+}
+
+// ---- Bulk actions ----
+
+export async function bulkSetStageAction(
+  ids: string[],
+  stage: string,
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  const stages = await listStages(userId);
+  if (!stages.some((s) => s.key === stage)) {
+    return { ok: false, error: "Invalid stage" };
+  }
+  try {
+    await bulkUpdateStage(userId, ids, stage);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/clients");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export async function bulkAddTagAction(
+  ids: string[],
+  tagId: string,
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  try {
+    await addTagToClients(userId, ids, tagId);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/clients");
+  return { ok: true };
+}
+
+export async function bulkDeleteAction(
+  ids: string[],
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  try {
+    await bulkSoftDelete(userId, ids);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/clients");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  revalidatePath("/clients/trash");
+  return { ok: true };
 }
 
 export async function updateClientStageAction(
@@ -137,7 +247,8 @@ export async function updateClientStageAction(
   stage: string,
 ): Promise<ClientActionResult> {
   const userId = await requireUserId();
-  if (!PIPELINE_STAGES.some((s) => s.key === stage)) {
+  const stages = await listStages(userId);
+  if (!stages.some((s) => s.key === stage)) {
     return { ok: false, error: "Invalid stage" };
   }
   try {
@@ -226,7 +337,10 @@ export async function importClientsAction(
   rows: Record<string, string>[],
 ): Promise<ImportResult> {
   const userId = await requireUserId();
-  const fields = await listFields(userId);
+  const [fields, stages] = await Promise.all([
+    listFields(userId),
+    listStages(userId),
+  ]);
 
   // Map each row's headers once, normalized, so we can look up by label/name.
   const normalizeRow = (row: Record<string, string>) => {
@@ -256,6 +370,15 @@ export async function importClientsAction(
   tags = await listTags(userId);
   const tagIdByName = new Map(tags.map((t) => [norm(t.name), t.id]));
 
+  // Dedup keys from existing clients (by email, and by name+phone).
+  const existing = await listClients(userId);
+  const seenEmail = new Set(
+    existing.map((c) => (c.email ? norm(c.email) : "")).filter(Boolean),
+  );
+  const seenNamePhone = new Set(
+    existing.map((c) => `${norm(c.name)}|${norm(c.phone ?? "")}`),
+  );
+
   let imported = 0;
   let skipped = 0;
 
@@ -266,6 +389,18 @@ export async function importClientsAction(
       skipped++;
       continue;
     }
+    const phone = (m.get("phone") ?? "").trim();
+    const email = (m.get("email") ?? "").trim();
+
+    // Skip duplicates of existing clients (or earlier rows in this file).
+    const emailKey = email ? norm(email) : "";
+    const npKey = `${norm(name)}|${norm(phone)}`;
+    if ((emailKey && seenEmail.has(emailKey)) || seenNamePhone.has(npKey)) {
+      skipped++;
+      continue;
+    }
+    seenNamePhone.add(npKey);
+    if (emailKey) seenEmail.add(emailKey);
     const custom_data: CustomData = {};
     for (const f of fields) {
       custom_data[f.key] = coerceImport(f, m.get(norm(f.label)));
@@ -277,15 +412,16 @@ export async function importClientsAction(
     // Accept a Stage column as either a key ("new") or a label ("New lead").
     const rawStage = norm(m.get("stage") ?? "");
     const stage =
-      PIPELINE_STAGES.find(
-        (s) => s.key === rawStage || norm(s.label) === rawStage,
-      )?.key ?? "new";
+      stages.find((s) => s.key === rawStage || norm(s.label) === rawStage)
+        ?.key ??
+      stages[0]?.key ??
+      "new";
 
     try {
       const id = await createClient(userId, {
         name,
-        phone: (m.get("phone") ?? "").trim() || null,
-        email: (m.get("email") ?? "").trim() || null,
+        phone: phone || null,
+        email: email || null,
         stage,
         custom_data,
       });

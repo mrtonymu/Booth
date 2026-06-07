@@ -6,12 +6,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { requireUserId } from "@/lib/auth";
 import { listFields } from "@/lib/data/fields";
 import { listTags } from "@/lib/data/tags";
+import { listStages } from "@/lib/data/stages";
 
 export default async function NewClientPage() {
   const userId = await requireUserId();
-  const [fields, tags] = await Promise.all([
+  const [fields, tags, stages] = await Promise.all([
     listFields(userId),
     listTags(userId),
+    listStages(userId),
   ]);
 
   return (
@@ -24,7 +26,7 @@ export default async function NewClientPage() {
           <ArrowLeft /> Back
         </Link>
       </PageHeader>
-      <ClientForm fields={fields} tags={tags} />
+      <ClientForm fields={fields} tags={tags} stages={stages} />
     </>
   );
 }

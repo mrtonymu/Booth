@@ -4,9 +4,15 @@ import { useRouter } from "next/navigation";
 import { Phone, Mail } from "lucide-react";
 import { TagList } from "@/components/tags/tag-picker";
 import { StageBadge } from "@/components/clients/stage-badge";
-import type { ClientWithTags } from "@/lib/types";
+import type { ClientWithTags, PipelineStage } from "@/lib/types";
 
-export function ClientGallery({ clients }: { clients: ClientWithTags[] }) {
+export function ClientGallery({
+  clients,
+  stages,
+}: {
+  clients: ClientWithTags[];
+  stages: PipelineStage[];
+}) {
   const router = useRouter();
 
   return (
@@ -20,7 +26,7 @@ export function ClientGallery({ clients }: { clients: ClientWithTags[] }) {
         >
           <div className="flex items-start justify-between gap-2">
             <span className="truncate font-medium">{c.name}</span>
-            <StageBadge stage={c.stage} />
+            <StageBadge stage={c.stage} stages={stages} />
           </div>
           <div className="space-y-1 text-sm text-muted-foreground">
             {c.phone && (

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,8 +36,11 @@ export function FieldsManager({ fields }: { fields: FieldDefinition[] }) {
     )
       return;
     const res = await deleteFieldAction(field.id);
-    if (!res.ok) alert(res.error);
-    else router.refresh();
+    if (!res.ok) toast.error(res.error ?? "Could not delete field");
+    else {
+      toast.success("Field deleted");
+      router.refresh();
+    }
   }
 
   return (

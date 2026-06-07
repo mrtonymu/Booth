@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +14,11 @@ import {
   updateClientAction,
   type ClientFormPayload,
 } from "@/app/(app)/clients/actions";
-import {
-  PIPELINE_STAGES,
-  type ClientWithTags,
-  type FieldDefinition,
-  type Tag,
+import type {
+  ClientWithTags,
+  FieldDefinition,
+  PipelineStage,
+  Tag,
 } from "@/lib/types";
 
 type CustomValue = string | boolean | null;
@@ -39,17 +40,21 @@ function initialCustom(
 export function ClientForm({
   fields,
   tags,
+  stages,
   client,
 }: {
   fields: FieldDefinition[];
   tags: Tag[];
+  stages: PipelineStage[];
   client?: ClientWithTags;
 }) {
   const router = useRouter();
   const [name, setName] = React.useState(client?.name ?? "");
   const [phone, setPhone] = React.useState(client?.phone ?? "");
   const [email, setEmail] = React.useState(client?.email ?? "");
-  const [stage, setStage] = React.useState(client?.stage ?? "new");
+  const [stage, setStage] = React.useState(
+    client?.stage ?? stages[0]?.key ?? "new",
+  );
   const [custom, setCustom] = React.useState(() =>
     initialCustom(fields, client),
   );
@@ -83,6 +88,7 @@ export function ClientForm({
       setSaving(false);
       return;
     }
+    toast.success(client ? "Client updated" : "Client created");
     router.push(`/clients/${client?.id ?? res.id}`);
     router.refresh();
   }
@@ -131,7 +137,7 @@ export function ClientForm({
             value={stage}
             onChange={(e) => setStage(e.target.value)}
           >
-            {PIPELINE_STAGES.map((s) => (
+            {stages.map((s) => (
               <option key={s.key} value={s.key}>
                 {s.label}
               </option>
