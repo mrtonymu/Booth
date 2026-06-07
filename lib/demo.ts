@@ -20,7 +20,11 @@ import type {
   Task,
   TaskWithClient,
 } from "@/lib/types";
-import { compareCustomValues, slugifyKey } from "@/lib/utils";
+import {
+  compareCustomValues,
+  slugifyKey,
+  DEFAULT_WHATSAPP_TEMPLATE,
+} from "@/lib/utils";
 import type { ClientInput, ListClientsParams } from "@/lib/data/clients";
 import type { FieldInput } from "@/lib/data/fields";
 
@@ -28,7 +32,7 @@ export const DEMO_MODE = process.env.DEMO_MODE === "true";
 export const DEMO_USER_ID = "demo-user";
 
 // Bump when the store shape changes so a stale dev (hot-reload) store reseeds.
-const STORE_VERSION = 5;
+const STORE_VERSION = 6;
 
 interface Store {
   _v: number;
@@ -40,6 +44,7 @@ interface Store {
   tasks: Task[];
   documents: ClientDocument[];
   stages: PipelineStage[];
+  settings: { whatsapp_template: string | null };
 }
 
 // Persist the store on globalThis so it survives across requests in dev.
@@ -161,6 +166,7 @@ function seed(): Store {
     tasks,
     documents,
     stages,
+    settings: { whatsapp_template: null },
   };
 }
 
@@ -503,4 +509,13 @@ export function demoDeleteStage(id: string) {
   const fallback = s.stages.find((x) => x.id !== id)!;
   for (const c of s.clients) if (c.stage === target.key) c.stage = fallback.key;
   s.stages = s.stages.filter((x) => x.id !== id);
+}
+
+// ---- settings ----
+export function demoGetSettings(): { whatsapp_template: string } {
+  const saved = getStore().settings.whatsapp_template;
+  return { whatsapp_template: saved ?? DEFAULT_WHATSAPP_TEMPLATE };
+}
+export function demoSetWhatsappTemplate(template: string) {
+  getStore().settings.whatsapp_template = template;
 }

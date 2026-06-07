@@ -12,16 +12,21 @@ import type { ClientWithTags, PipelineStage } from "@/lib/types";
 export function ClientGallery({
   clients,
   stages,
+  whatsappTemplate,
 }: {
   clients: ClientWithTags[];
   stages: PipelineStage[];
+  whatsappTemplate?: string;
 }) {
   const router = useRouter();
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {clients.map((c) => {
-        const wa = whatsappLink(c.phone);
+        const wa = whatsappLink(c.phone, {
+          name: c.name,
+          template: whatsappTemplate,
+        });
         return (
           // Card body is a mouse-click convenience; the name link below is the
           // keyboard/semantic navigation, so no nested interactive controls.

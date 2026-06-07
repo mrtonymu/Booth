@@ -68,19 +68,51 @@ export function compareCustomValues(
 }
 
 /**
+ * Default WhatsApp opening message. `{name}` is replaced with the client's
+ * name; the surrounding * makes it bold in WhatsApp. Editable in Settings →
+ * WhatsApp, so this is only the fallback when nothing has been saved.
+ */
+export const DEFAULT_WHATSAPP_TEMPLATE = `Hi *{name}* 👋
+
+This is Tony From IOI City Mall
+
+You can save my contact first ya 😆`;
+
+/**
+ * Fill a WhatsApp template with a client's name. Case-insensitive `{name}`
+ * (so {Name}/{NAME} also work). A blank name just drops the token.
+ */
+export function renderWhatsappMessage(
+  template: string,
+  name: string | null | undefined,
+): string {
+  return template.replace(/\{name\}/gi, (name ?? "").trim());
+}
+
+/**
  * Build a wa.me link from a phone number. Strips +, spaces, dashes, etc., so
  * "+60 12-345 6789" → "https://wa.me/60123456789".
  *
  * A leading 0 (local format, e.g. "012-345 6789") is treated as a Malaysian
  * number and gets +60 — change "60" below if your clients are mostly elsewhere.
  * Returns null if there aren't enough digits.
+ *
+ * Pass `template` (+ `name`) to pre-fill the chat with a message via `?text=`,
+ * so tapping the button opens WhatsApp with the greeting already typed.
  */
-export function whatsappLink(phone: string | null | undefined): string | null {
+export function whatsappLink(
+  phone: string | null | undefined,
+  opts?: { name?: string | null; template?: string | null },
+): string | null {
   if (!phone) return null;
   let digits = phone.replace(/\D/g, "");
   if (digits.startsWith("0")) digits = "60" + digits.slice(1);
   if (digits.length < 8) return null;
-  return `https://wa.me/${digits}`;
+  const base = `https://wa.me/${digits}`;
+  const template = opts?.template;
+  if (!template || !template.trim()) return base;
+  const msg = renderWhatsappMessage(template, opts?.name);
+  return `${base}?text=${encodeURIComponent(msg)}`;
 }
 
 export function formatBytes(n: number | null | undefined): string {

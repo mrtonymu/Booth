@@ -13,6 +13,7 @@ import { listClients } from "@/lib/data/clients";
 import { listFields } from "@/lib/data/fields";
 import { listTags } from "@/lib/data/tags";
 import { listStages } from "@/lib/data/stages";
+import { getSettings } from "@/lib/data/settings";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -29,10 +30,11 @@ export default async function ClientsPage({
   const sp = await searchParams;
   const dir = str(sp.dir) === "asc" ? "asc" : "desc";
 
-  const [fields, tags, stages, clients] = await Promise.all([
+  const [fields, tags, stages, settings, clients] = await Promise.all([
     listFields(userId),
     listTags(userId),
     listStages(userId),
+    getSettings(userId),
     listClients(userId, {
       search: str(sp.q),
       tagId: str(sp.tag),
@@ -99,12 +101,20 @@ export default async function ClientsPage({
           <>
             {/* Mobile: always a card list. */}
             <div className="md:hidden">
-              <ClientGallery clients={clients} stages={stages} />
+              <ClientGallery
+                clients={clients}
+                stages={stages}
+                whatsappTemplate={settings.whatsapp_template}
+              />
             </div>
             {/* Desktop: table or gallery per the toggle. */}
             <div className="hidden md:block">
               {view === "gallery" ? (
-                <ClientGallery clients={clients} stages={stages} />
+                <ClientGallery
+                  clients={clients}
+                  stages={stages}
+                  whatsappTemplate={settings.whatsapp_template}
+                />
               ) : (
                 <ClientTable
                   clients={clients}

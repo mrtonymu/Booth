@@ -16,6 +16,7 @@ import { listActivities } from "@/lib/data/activities";
 import { listTasks } from "@/lib/data/tasks";
 import { listDocuments } from "@/lib/data/documents";
 import { listStages } from "@/lib/data/stages";
+import { getSettings } from "@/lib/data/settings";
 import { formatDate, whatsappLink } from "@/lib/utils";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import type { CustomData, FieldDefinition } from "@/lib/types";
@@ -34,7 +35,7 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const userId = await requireUserId();
-  const [client, fields, activities, tasks, documents, stages] =
+  const [client, fields, activities, tasks, documents, stages, settings] =
     await Promise.all([
       getClient(userId, id),
       listFields(userId),
@@ -42,9 +43,15 @@ export default async function ClientDetailPage({
       listTasks(userId, id),
       listDocuments(userId, id),
       listStages(userId),
+      getSettings(userId),
     ]);
 
   if (!client) notFound();
+
+  const waLink = whatsappLink(client.phone, {
+    name: client.name,
+    template: settings.whatsapp_template,
+  });
 
   return (
     <>
@@ -84,9 +91,9 @@ export default async function ClientDetailPage({
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
-                {whatsappLink(client.phone) && (
+                {waLink && (
                   <a
-                    href={whatsappLink(client.phone)!}
+                    href={waLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Message on WhatsApp"

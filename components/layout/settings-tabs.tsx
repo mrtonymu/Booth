@@ -8,6 +8,7 @@ const TABS = [
   { href: "/settings/fields", label: "Custom fields" },
   { href: "/settings/tags", label: "Tags" },
   { href: "/settings/stages", label: "Pipeline stages" },
+  { href: "/settings/whatsapp", label: "WhatsApp" },
 ];
 
 /** Small switcher between settings pages (handy on mobile without a sidebar). */
