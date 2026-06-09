@@ -12,6 +12,7 @@ import {
   listClients,
   restoreClient,
   updateClient,
+  updateClientAppointment,
   updateClientStage,
 } from "@/lib/data/clients";
 import {
@@ -35,6 +36,7 @@ export interface ClientFormPayload {
   phone?: string;
   email?: string;
   stage: string;
+  appointmentAt?: string | null;
   custom: Record<string, string | boolean | null>;
   tagIds: string[];
 }
@@ -104,6 +106,7 @@ export async function createClientAction(
       phone: payload.phone?.trim() || null,
       email: payload.email?.trim() || null,
       stage: normalizeStage(stages, payload.stage),
+      appointment_at: payload.appointmentAt || null,
       custom_data,
     });
     await setClientTags(userId, id, payload.tagIds ?? []);
@@ -135,6 +138,7 @@ export async function updateClientAction(
       phone: payload.phone?.trim() || null,
       email: payload.email?.trim() || null,
       stage: normalizeStage(stages, payload.stage),
+      appointment_at: payload.appointmentAt || null,
       custom_data,
     });
     await setClientTags(userId, id, payload.tagIds ?? []);
@@ -260,6 +264,23 @@ export async function updateClientStageAction(
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Quick-set or clear a client's appointment date/time (ISO string or null). */
+export async function updateClientAppointmentAction(
+  id: string,
+  appointmentAt: string | null,
+): Promise<ClientActionResult> {
+  const userId = await requireUserId();
+  try {
+    await updateClientAppointment(userId, id, appointmentAt || null);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath(`/clients/${id}`);
+  revalidatePath("/calendar");
+  revalidatePath("/clients");
   return { ok: true };
 }
 
@@ -423,6 +444,7 @@ export async function importClientsAction(
         phone: phone || null,
         email: email || null,
         stage,
+        appointment_at: null,
         custom_data,
       });
       if (tagIds.length) await setClientTags(userId, id, tagIds);

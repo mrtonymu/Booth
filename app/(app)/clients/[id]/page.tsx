@@ -7,6 +7,7 @@ import { TagList } from "@/components/tags/tag-picker";
 import { Timeline } from "@/components/activities/timeline";
 import { DeleteClientButton } from "@/components/clients/delete-client-button";
 import { StageBadge } from "@/components/clients/stage-badge";
+import { AppointmentScheduler } from "@/components/clients/appointment-scheduler";
 import { ClientTasks } from "@/components/tasks/client-tasks";
 import { ClientDocuments } from "@/components/documents/client-documents";
 import { requireUserId } from "@/lib/auth";
@@ -125,6 +126,11 @@ export default async function ClientDetailPage({
               </div>
             )}
           </div>
+
+          <AppointmentScheduler
+            clientId={client.id}
+            appointmentAt={client.appointment_at}
+          />
 
           {fields.length > 0 && (
             <dl className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">

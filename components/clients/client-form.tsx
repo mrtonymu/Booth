@@ -14,6 +14,7 @@ import {
   updateClientAction,
   type ClientFormPayload,
 } from "@/app/(app)/clients/actions";
+import { isoToLocalInput, localInputToISO } from "@/lib/utils";
 import type {
   ClientWithTags,
   FieldDefinition,
@@ -55,6 +56,9 @@ export function ClientForm({
   const [stage, setStage] = React.useState(
     client?.stage ?? stages[0]?.key ?? "new",
   );
+  const [appointmentAt, setAppointmentAt] = React.useState(
+    isoToLocalInput(client?.appointment_at),
+  );
   const [custom, setCustom] = React.useState(() =>
     initialCustom(fields, client),
   );
@@ -77,6 +81,7 @@ export function ClientForm({
       phone,
       email,
       stage,
+      appointmentAt: localInputToISO(appointmentAt),
       custom,
       tagIds,
     };
@@ -143,6 +148,15 @@ export function ClientForm({
               </option>
             ))}
           </Select>
+        </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <Label htmlFor="c-appt">Appointment (shows on the calendar)</Label>
+          <Input
+            id="c-appt"
+            type="datetime-local"
+            value={appointmentAt}
+            onChange={(e) => setAppointmentAt(e.target.value)}
+          />
         </div>
       </div>
 

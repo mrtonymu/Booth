@@ -7,7 +7,7 @@ import { requireUserId } from "@/lib/auth";
 import { listTasks } from "@/lib/data/tasks";
 import { listClients } from "@/lib/data/clients";
 import { listFields } from "@/lib/data/fields";
-import { todayISO } from "@/lib/utils";
+import { formatTime, isoToLocalDate, todayISO } from "@/lib/utils";
 
 export default async function CalendarPage() {
   const userId = await requireUserId();
@@ -48,6 +48,21 @@ export default async function CalendarPage() {
     }
   }
 
+  // Built-in client appointments.
+  for (const c of clients) {
+    if (c.appointment_at) {
+      const day = isoToLocalDate(c.appointment_at);
+      if (day) {
+        events.push({
+          date: day,
+          title: `${c.name} · ${formatTime(c.appointment_at)}`,
+          kind: "appointment",
+          href: `/clients/${c.id}`,
+        });
+      }
+    }
+  }
+
   const today = todayISO();
   const [y, m] = today.split("-");
 
@@ -55,7 +70,7 @@ export default async function CalendarPage() {
     <>
       <PageHeader
         title="Calendar"
-        description="Open tasks and key client dates in one view. Blue = tasks, purple = client dates."
+        description="Tasks, appointments, and key client dates. Blue = tasks, orange = appointments, purple = client dates."
       />
       <div className="p-4 md:p-6">
         <CalendarView

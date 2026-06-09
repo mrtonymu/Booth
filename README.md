@@ -44,17 +44,20 @@ order:
 supabase/migrations/0001_init.sql
 supabase/migrations/0002_pipeline_tasks.sql
 supabase/migrations/0003_documents.sql
+supabase/migrations/0004_stages_and_soft_delete.sql
+supabase/migrations/0005_app_settings.sql
+supabase/migrations/0006_appointments.sql
+supabase/migrations/0007_storage_bucket.sql
 ```
 
-`0001` creates `clients`, `field_definitions`, `tags`, `client_tags`, and
-`activities`. `0002` adds the pipeline `stage` column and the `tasks` table.
-`0003` adds the `documents` table. All tables have indexes and row-level
-security locked to the service role.
+These create all tables and columns: clients (incl. `stage`, soft-delete, and
+the `appointment_at` date/time), custom fields, tags, tasks, activities,
+documents, pipeline stages, and settings. `0007` also creates the private
+**`documents` Storage bucket** used for photo/file uploads (downloads use
+short-lived signed URLs). All tables have RLS locked to the service role.
 
-**For file uploads**, also create a **private** Storage bucket named
-`documents` (Dashboard → Storage → New bucket → name `documents`, Public =
-OFF). Downloads use short-lived signed URLs. *(Demo mode skips this — files are
-kept in memory.)*
+> Already ran 0001–0005? Just run the new ones: **`0006_appointments.sql`**
+> (appointment date/time) and **`0007_storage_bucket.sql`** (file uploads).
 
 > Prefer the CLI? `supabase db push` works if you've linked the project with
 > the [Supabase CLI](https://supabase.com/docs/guides/cli).

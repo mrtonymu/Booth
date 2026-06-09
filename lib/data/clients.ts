@@ -12,6 +12,7 @@ import {
   demoListDeletedClients,
   demoRestoreClient,
   demoUpdateClient,
+  demoUpdateClientAppointment,
   demoUpdateClientStage,
 } from "@/lib/demo";
 import { compareCustomValues } from "@/lib/utils";
@@ -122,6 +123,7 @@ export interface ClientInput {
   phone: string | null;
   email: string | null;
   stage: string;
+  appointment_at: string | null;
   custom_data: CustomData;
 }
 
@@ -165,6 +167,22 @@ export async function updateClientStage(
   const { error } = await db
     .from("clients")
     .update({ stage })
+    .eq("id", id)
+    .eq("owner_id", userId);
+  if (error) throw new Error(error.message);
+}
+
+/** Quick-set the appointment date/time (ISO timestamp, or null to clear). */
+export async function updateClientAppointment(
+  userId: string,
+  id: string,
+  appointmentAt: string | null,
+) {
+  if (DEMO_MODE) return demoUpdateClientAppointment(id, appointmentAt);
+  const db = getSupabaseAdmin();
+  const { error } = await db
+    .from("clients")
+    .update({ appointment_at: appointmentAt })
     .eq("id", id)
     .eq("owner_id", userId);
   if (error) throw new Error(error.message);

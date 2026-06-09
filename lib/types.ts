@@ -83,6 +83,8 @@ export interface Client {
   phone: string | null;
   email: string | null;
   stage: string;
+  /** Optional scheduled appointment (ISO timestamp); shown on the calendar. */
+  appointment_at: string | null;
   custom_data: CustomData;
   created_at: string;
   updated_at: string;

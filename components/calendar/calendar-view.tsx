@@ -8,9 +8,16 @@ import { cn } from "@/lib/utils";
 export interface CalendarEvent {
   date: string; // YYYY-MM-DD
   title: string;
-  kind: "task" | "date";
+  kind: "task" | "date" | "appointment";
   href: string;
 }
+
+const EVENT_CLASSES: Record<CalendarEvent["kind"], string> = {
+  task: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+  appointment:
+    "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300",
+  date: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
+};
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -146,9 +153,7 @@ export function CalendarView({
                         title={e.title}
                         className={cn(
                           "block truncate rounded px-1 py-0.5 text-[10px] leading-tight transition-opacity hover:opacity-80",
-                          e.kind === "task"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                            : "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
+                          EVENT_CLASSES[e.kind] ?? EVENT_CLASSES.date,
                         )}
                       >
                         {e.title}

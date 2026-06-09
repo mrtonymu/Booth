@@ -178,7 +178,7 @@ function t(id: string, name: string, color: string): Tag {
   return { id, owner_id: O, name, color, created_at: "2026-05-20T00:00:00Z" };
 }
 function c(id: string, name: string, phone: string, email: string, stage: string, custom: CustomData, created: string, updated: string): Client {
-  return { id, owner_id: O, name, phone, email, stage, custom_data: custom, created_at: created, updated_at: updated, deleted_at: null };
+  return { id, owner_id: O, name, phone, email, stage, appointment_at: null, custom_data: custom, created_at: created, updated_at: updated, deleted_at: null };
 }
 function a(id: string, client_id: string, type: ActivityType, content: string, created: string): Activity {
   return { id, client_id, owner_id: O, type, content, created_at: created };
@@ -304,7 +304,8 @@ export function demoCreateClient(input: ClientInput): string {
   const id = uid("cl");
   getStore().clients.push({
     id, owner_id: O, name: input.name, phone: input.phone, email: input.email,
-    stage: input.stage ?? "new", custom_data: { ...input.custom_data },
+    stage: input.stage ?? "new", appointment_at: input.appointment_at ?? null,
+    custom_data: { ...input.custom_data },
     created_at: now(), updated_at: now(), deleted_at: null,
   });
   return id;
@@ -321,6 +322,17 @@ export function demoUpdateClientStage(id: string, stage: string) {
   const cl = getStore().clients.find((x) => x.id === id && x.owner_id === O);
   if (cl) {
     cl.stage = stage;
+    cl.updated_at = now();
+  }
+}
+
+export function demoUpdateClientAppointment(
+  id: string,
+  appointmentAt: string | null,
+) {
+  const cl = getStore().clients.find((x) => x.id === id && x.owner_id === O);
+  if (cl) {
+    cl.appointment_at = appointmentAt;
     cl.updated_at = now();
   }
 }

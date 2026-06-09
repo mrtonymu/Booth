@@ -2,49 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/auth";
-import { deleteDocument, uploadDocument } from "@/lib/data/documents";
+import { deleteDocument } from "@/lib/data/documents";
 
 export interface DocActionResult {
   ok: boolean;
   error?: string;
 }
 
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-
-export async function uploadDocumentAction(
-  formData: FormData,
-): Promise<DocActionResult> {
-  const userId = await requireUserId();
-  const clientId = String(formData.get("clientId") ?? "");
-  const file = formData.get("file");
-
-  if (!clientId) return { ok: false, error: "Missing client" };
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "No file selected" };
-  }
-  if (file.size > MAX_BYTES) {
-    return { ok: false, error: "File too large (max 10 MB)" };
-  }
-
-  try {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    // Re-check the actual byte length (don't trust the reported file.size).
-    if (bytes.length > MAX_BYTES) {
-      return { ok: false, error: "File too large (max 10 MB)" };
-    }
-    await uploadDocument(userId, clientId, {
-      name: file.name,
-      mime: file.type || null,
-      size: file.size,
-      bytes,
-    });
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-  revalidatePath(`/clients/${clientId}`);
-  return { ok: true };
-}
-
+// Note: uploads go through the route handler at
+// app/api/clients/[id]/documents/route.ts so the browser can show real upload
+// progress. Deletion stays a server action.
 export async function deleteDocumentAction(
   id: string,
   clientId: string,
